@@ -70,7 +70,7 @@ def create_app(config_filename=None, host="localhost"):
     flask_app = Flask("API Logic Server")
     flask_app.config.from_object("config.Config")
     db = safrs.DB  # opens database per config, setting session
-    detail_logging = False
+    detail_logging = True
     if detail_logging:
         import logging
         logging.basicConfig()
