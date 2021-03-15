@@ -70,6 +70,12 @@ def create_app(config_filename=None, host="localhost"):
     flask_app = Flask("API Logic Server")
     flask_app.config.from_object("config.Config")
     db = safrs.DB  # opens database per config, setting session
+    detail_logging = False
+    if detail_logging:
+        import logging
+        logging.basicConfig()
+        logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
+
     Base: declarative_base = db.Model
     session: Session = db.session
     print("app/__init__#create_app - got session: " + str(session))

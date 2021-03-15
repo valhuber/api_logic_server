@@ -34,7 +34,7 @@ class Config:
     # Database
     # SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
     #                          'sqlite:///' + os.path.join(basedir, 'app.db') + '?check_same_thread=False'
-    SQLALCHEMY_DATABASE_URI = "sqlite:////Users/val/xdev/ApiLogicServer/api_logic_server_cli/nw.sqlite"
+    SQLALCHEMY_DATABASE_URI = "sqlite:////Users/val/xdev/xServers/api_logic_server/database/nw.sqlite"
     """ FIXME what is this
     if 'sqlite' in SQLALCHEMY_DATABASE_URI:
         util.log('Basedir: '+basedir)
