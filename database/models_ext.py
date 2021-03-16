@@ -1,29 +1,52 @@
+from types import MethodType
+
+import sqlalchemy
 from database import models
-from sqlalchemy.orm import relationship, remote, foreign
+from flask_sqlalchemy import SQLAlchemy
+from safrs import jsonapi_attr
+from sqlalchemy import Column
+from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy.orm import relationship, remote, foreign, column_property
+
+""" Objective 1 - add relationship
+
+working, per https://docs.sqlalchemy.org/en/13/orm/join_conditions.html#specifying-alternate-join-conditions
+
+"""
 
 models.Employee.Manager = relationship('Employee', cascade_backrefs=True, backref='Manages',
                                        primaryjoin=remote(models.Employee.Id) ==
                                                    foreign(models.Employee.ReportsTo)
                                )
-print("models_ext.py successfully executes: models.Employee.Manager = relationship('Employee', cascade_backrefs=True, backref='Manages'")
+""" Objective 2 - add derived attribute
+
+working, per Thomas' suggestion... thanks!
 
 """
-https://docs.sqlalchemy.org/en/13/orm/join_conditions.html#specifying-alternate-join-conditions
 
-models.Employee.Manager = relationship('Employee', cascade_backrefs=True, backref='Manages',
-                               primaryjoin="Employee.Id==Employee.ReportsTo"
-==> Could not locate any relevant foreign key columns for primary join condition
+@jsonapi_attr
+def proper_salary(row):
+    if not hasattr(row, "_proper_salary"):
+        row._proper_salary = row.Salary + 10000  # create the attr
+    return row._proper_salary
+
+@proper_salary.setter
+def proper_salary(row, value):
+    row._proper_salary = value
+    # print(f'_proper_salary={row._proper_salary}')
+    pass
+
+models.Employee.ProperSalary = proper_salary
+# works on instance, and in swagger - success!
+# no need for   # property(fget=get_proper_salary, fset=set_proper_salary)
+
+print("models_ext.py successfully executes: models.Employee.Manager = relationship('Employee', cascade_backrefs=True, backref='Manages'")
 
 
-models.Employee.Manager = relationship('Employee', cascade_backrefs=True, backref='Manages',
-                                       primaryjoin=remote(models.Employee.Id) ==
-                                                   foreign(models.Employee.ReportsTo)
-==> hangs on Employee Get
+"""
+works, but taking 2 minutes.  Sql log:
 
-swagger peformance is > 1 minute to retrieve orders (a dozen rows)
-
-long dely after EXECUTE, then here is the sql:
-
+DEBUG:safrs.safrs_init:sorting not implemented for Employee.proper_salary
 INFO:sqlalchemy.engine.base.Engine:BEGIN (implicit)
 INFO:sqlalchemy.engine.base.Engine:SELECT count(*) AS count_1
 FROM (SELECT "Employee"."Id" AS "Employee_Id", "Employee"."LastName" AS "Employee_LastName", "Employee"."FirstName" AS "Employee_FirstName", "Employee"."Title" AS "Employee_Title", "Employee"."TitleOfCourtesy" AS "Employee_TitleOfCourtesy", "Employee"."BirthDate" AS "Employee_BirthDate", "Employee"."HireDate" AS "Employee_HireDate", "Employee"."Address" AS "Employee_Address", "Employee"."City" AS "Employee_City", "Employee"."Region" AS "Employee_Region", "Employee"."PostalCode" AS "Employee_PostalCode", "Employee"."Country" AS "Employee_Country", "Employee"."HomePhone" AS "Employee_HomePhone", "Employee"."Extension" AS "Employee_Extension", "Employee"."Photo" AS "Employee_Photo", "Employee"."Notes" AS "Employee_Notes", "Employee"."ReportsTo" AS "Employee_ReportsTo", "Employee"."PhotoPath" AS "Employee_PhotoPath", "Employee"."IsCommissioned" AS "Employee_IsCommissioned", "Employee"."Salary" AS "Employee_Salary"
@@ -34,7 +57,6 @@ FROM (SELECT "Employee"."Id" AS "Employee_Id", "Employee"."LastName" AS "Employe
 FROM "Employee" ORDER BY "Employee"."Id", "Employee"."LastName", "Employee"."FirstName", "Employee"."Title", "Employee"."TitleOfCourtesy", "Employee"."BirthDate", "Employee"."HireDate", "Employee"."Address", "Employee"."City", "Employee"."Region", "Employee"."PostalCode", "Employee"."Country", "Employee"."HomePhone", "Employee"."Extension", "Employee"."Photo", "Employee"."Notes", "Employee"."ReportsTo", "Employee"."PhotoPath", "Employee"."IsCommissioned", "Employee"."Salary"
  LIMIT ? OFFSET ?) AS anon_1 LEFT OUTER JOIN "Employee" AS "Employee_1" ON "Employee_1"."Id" = anon_1."Employee_ReportsTo" LEFT OUTER JOIN "Employee" AS "Employee_2" ON anon_1."Employee_Id" = "Employee_2"."ReportsTo" LEFT OUTER JOIN "EmployeeAudit" AS "EmployeeAudit_1" ON anon_1."Employee_Id" = "EmployeeAudit_1"."EmployeeId" LEFT OUTER JOIN "EmployeeTerritory" AS "EmployeeTerritory_1" ON anon_1."Employee_Id" = "EmployeeTerritory_1"."EmployeeId" LEFT OUTER JOIN "Order" AS "Order_1" ON anon_1."Employee_Id" = "Order_1"."EmployeeId" ORDER BY anon_1."Employee_Id", anon_1."Employee_LastName", anon_1."Employee_FirstName", anon_1."Employee_Title", anon_1."Employee_TitleOfCourtesy", anon_1."Employee_BirthDate", anon_1."Employee_HireDate", anon_1."Employee_Address", anon_1."Employee_City", anon_1."Employee_Region", anon_1."Employee_PostalCode", anon_1."Employee_Country", anon_1."Employee_HomePhone", anon_1."Employee_Extension", anon_1."Employee_Photo", anon_1."Employee_Notes", anon_1."Employee_ReportsTo", anon_1."Employee_PhotoPath", anon_1."Employee_IsCommissioned", anon_1."Employee_Salary"
 INFO:sqlalchemy.engine.base.Engine:(10, 0)
-
-
+INFO:sqlalchemy.engine.base.Engine:COMMIT
 
 """
